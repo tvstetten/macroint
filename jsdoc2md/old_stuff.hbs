@@ -1,0 +1,30 @@
+### Modifier examples
+
+Macros can be extended with so-called modifiers. Modifiers allow to check and/or 
+modify the result of the macro. Modifiers are added to the macro-content separated 
+by a "`|`". Spaces are ignored.
+
+```js
+mi = new MacroInt({ name: "MacroInt" })
+
+// Convert the result to uppercase (modifier-key: "uppercase" / "-u")
+console.log(mi.resolve("${name | upper}")) // => MACROINT
+
+// Use a default in case the macro is undefined (modifier-key: "default" / "-d").
+console.log(mi.resolve("${xxx | default: 'unknown'}")) // => unknown
+
+// Throw an error if macro-result is 'undefined' (modifier-key: "mandatory" / "-m").
+try {
+    console.log(mi.resolve("${xxx | mandatory}"))
+} catch (e) {
+    console.log(e)
+}
+
+// Multiple defaults. Only the 'foo' alternative can be found in the repository. Lowercase the result
+console.log(mi.resolve("${foo1 | -d:foo | -d:'not found' | lower}")) // => bar
+// No version of 'foo' alternatives can be found in the repository. Uppercase the result
+console.log(mi.resolve("${foo1 | -d:Foo2 | -d:'not found' | upper}")) // => NOT FOUND
+// Uppercase-modifier before the string-default => the "not found" is returned not uppercase.
+console.log(mi.resolve("${foo1 | -d:Foo2  | upper | -d:'not found'}")) // => not found
+```
+

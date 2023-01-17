@@ -1,0 +1,86 @@
+{
+    "name": "macroint",
+    "description": "Interpolate Macros in Strings, Object-Properties and Array-Elements.",
+    "author": "Thomas von Stetten",
+    "license": "MIT",
+    "version_source": "www.semver.org",
+    "version": "0.3.0",
+    "main": "index.js",
+    "types": "index.d.ts",
+    "directories": {
+        "examples": "examples"
+    },
+    "keywords": [
+        "config-updater",
+        "config",
+        "env",
+        "environment",
+        "property",
+        "configuration",
+        "config-management"
+    ],
+    "readmeFilename": "README.md",
+    "scripts": {
+        "test": "mocha",
+        "coverage": "c8 --reporter=text mocha",
+        "ts-types": "npx -p typescript tsc *.js --declaration --allowJs --emitDeclarationOnly --outDir .",
+        "doc": "yarn jsdoc index.js -d ./jsdoc/ --readme ./README.md",
+        "md_": "yarn jsdoc2md index.js --example-lang js --param-list-format list --separators >readme_.md",
+        "md__": "yarn jsdoc2md index.js --helper ./jsdoc2md/rawinclude.js -t ./jsdoc2md/readme.hbs --example-lang js --partial ./jsdoc2md/*.hbs --param-list-format table --separators >readme.md",
+        "md___": "yarn jsdoc2md index.js --plugin dmd-readable -t ./jsdoc2md/overview.hbs --partial ./jsdoc2md/**/*.hbs --example-lang js --helper ./jsdoc2md/jsdoc2md-helper.js >readme.md",
+        "md____": "yarn jsdoc2md index.js -t ./jsdoc2md/overview.hbs --partial ./jsdoc2md/**/*.hbs --example-lang js --helper ./jsdoc2md/jsdoc2md-helper.js >readme.md",
+        "md": "node ./jsdoc2md/build_readme.js"
+    },
+    "badges": {
+        "npm": {
+            "image": "https://img.shields.io/npm/v/{{name}}.svg",
+            "url": "https://npmjs.com/package/{{name}}"
+        },
+        "deps": {
+            "image": "https://david-dm.org/darrenpaulwright/{{name}}.svg",
+            "url": "https://david-dm.org/darrenpaulwright/{{name}}"
+        },
+        "size": {
+            "base": "https://packagephobia.now.sh/",
+            "image": "badge?p={{name}}",
+            "url": "result?p={{name}}"
+        },
+        "vulnerabilities": {
+            "base": "https://snyk.io/test/github/DarrenPaulWright/{{name}}",
+            "image": "/badge.svg?targetFile=package.json",
+            "url": "?targetFile=package.json"
+        },
+        "license": {
+            "image": "https://img.shields.io/github/license/DarrenPaulWright/{{name}}.svg",
+            "url": "https://npmjs.com/package/{{name}}/LICENSE.md"
+        }
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/tvstetten/macroint.git"
+    },
+    "dependencies": {},
+    "cspell": {
+        "words": [
+            "stetten",
+            "macroint",
+            "emptyarray",
+            "macrokey",
+            "repositorycallback",
+            "modifiercallback",
+            "macrosymbols",
+            "olleH",
+            "MAXCOUNT",
+            "rawinclude"
+        ]
+    },
+    "devDependencies": {
+        "@types/node": "^18.11.9",
+        "c8": "^7.12.0",
+        "chai": "^4.3.7",
+        "dmd-readable": "^1.2.4",
+        "jsdoc": "^4.0.0",
+        "jsdoc-to-markdown": "^8.0.0",
+        "mocha": "^10.1.0"
+    }
+}

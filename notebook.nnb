@@ -1,0 +1,137 @@
+{
+    "cells": [
+        {
+            "language": "typescript",
+            "source": [
+                "// Comment\nlet x, y\nx = 1\ny = 1+1\nconsole.log(x, y)"
+            ],
+            "outputs": []
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "const { Interpolator } = require(\"./index\")\n\nlet cu = new Interpolator()\nlet result = cu.evalMacro(\"1234\")\nconsole.log(\"result:\", result)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stderr",
+                            "value": [
+                                "result: 1234",
+                                "Debugger attached.",
+                                ""
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stderr",
+                            "value": [
+                                "Debugger ending on ws://127.0.0.1:46781/3017016a-7766-4f5f-9576-95fbb0c17f3c",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "let s = \"!\\\"§$%%&>/()=?öäüaa122112\"\nlet i = 0\nlet char\nwhile (i < s.length) {\n    char = s[i]\n    if ((char >= \"0\" && char <= \"9\") ||\n      (char == \"_\")||\n      (char >= \"a\" && char <= \"z\")||\n      (char >= \"A\" && char <= \"Z\")\n    ) {\n        break\n    }\n    i++\n}\nlet s0 = s.substring(0, i-1)\nlet s1 = s.substring(i-1)\nconsole.log(i, s, s0, s1)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "16 !\"§$%%&>/()=?öäüaa122112 !\"§$%%&>/()=?öä üaa122112",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "class xyz {\n\n    constructor () {\n        this.uniqueId = this.constructor.name \n        \n        s = Date.getMilliseconds().asString()\n        console.log(this.uniqueID)\n    }\n}\n\nx = xyz()\nx.uniqueId\n"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.error",
+                            "value": {
+                                "name": "TypeError",
+                                "message": "Class constructor xyz cannot be invoked without 'new'",
+                                "stack": "    at <Cell 3> [11, 0]\n    at <Cell 3> [12, 46]\n    at Script.runInContext (node:vm:141:12)\n    at Script.runInNewContext (node:vm:146:17)\n    at Object.runInNewContext (node:vm:306:38)\n    at C (/root/.vscode-server/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:113345)\n    at t.execCode (/root/.vscode-server/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:114312)\n    at k.<anonymous> (/root/.vscode-server/extensions/donjayamanne.typescript-notebook-2.0.6/out/extension/server/index.js:2:142156)\n    at k.emit (node:events:513:28)\n    at k.emit (node:domain:489:12)"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stderr",
+                            "value": [
+                                "Debugger ending on ws://127.0.0.1:46781/3017016a-7766-4f5f-9576-95fbb0c17f3c",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "s = \"-d: 'loca:lhost': Another : `a string!`\"\nregex = /\\s*(\".*?\"|'.*?'|`.*?`|.+)\\s*:/gum\nregex = /\\s*(\".*?\")|('.*?')|(`.*?`)|(.+)\\s*:/\nregex = /\\s*:\\s*/g\n// regex = /:/\na = s.split(regex)\n\n// console.log(a)\n// console.log(a.length)\n\n// b = s.split(/\\s*:\\s*/gum)\n// console.log(b)\n\nc = s.match(regex, (...args) => {\n    console.log(args)\n})"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "text/plain",
+                            "value": [
+                                "[",
+                                "  \u001b[32m': '\u001b[39m,",
+                                "  \u001b[32m':'\u001b[39m,",
+                                "  \u001b[32m': '\u001b[39m,",
+                                "  \u001b[32m' : '\u001b[39m",
+                                "]"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "language": "javascript",
+            "source": [
+                "m = new Map()\nf = () => {}\nconsole.log(typeof m)\nconsole.log([\"object\", \"map\"].includes(typeof m))\nconsole.log(typeof m in [\"object\", \"map\"])\nconsole.log(typeof f)"
+            ],
+            "outputs": [
+                {
+                    "items": [
+                        {
+                            "mime": "application/vnd.code.notebook.stdout",
+                            "value": [
+                                "object",
+                                "true",
+                                "false",
+                                "function",
+                                ""
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,149 @@
+{{optionSet "global-index-format" "dl"~}}
+# {{changeCase "title" (package "name")}} {{#each (package "badges")}}[![{{@key}}][{{@key}}]][{{@key}}-url] {{/each}}
+> {{package "description"}}
+
+## TOC
+* [Overview](#overview)
+* [Introduction](#Introduction)
+* [API Documentation][#api-documentation]
+* [Details and Concepts](#details-and-concepts)
+  *  [macroKey](#macrokey)
+  *  [Modifier](#modifier)
+  *  [ModifierCallback](#modifiercallback)
+  *  [Error-Handling](#error-handling)
+  *  [Repository](#repository)
+  *  [MacroSymbols](#macrosymbols)
+  *  [Siblings-Templates](#siblings-templates)
+* [API Documentation][#api-documentation]
+
+## Overview
+
+- Interpolate and resolve macro-expressions in strings, object-property-values and array-elements.
+- Macros can be extended with modifiers that allow checking and/or modifying the macro-result.
+- There are pre-defined modifiers like 'mandatory', 'default', 'upper',...
+- Additional custom modifiers can be registered.
+- Multiple sources to resolve macros (Repositories) simultaneously.
+- Repositories can also be callbacks to implement decryption, db-access, fault-access,...
+- Macros can contain macros (to build the macro-value).
+- If resolving objects macros can access the path to the current property.
+- If used with objects property-templates can be defined. All siblings of it are filled with all missing properties of the template.
+- All indicators for the macro, the separator for modifiers, and other special functions can be customized.
+
+<br><a name="Installation"></a>
+
+{{>heading-indent}}Installation
+
+```sh
+npm install {{package "name"}}
+```
+
+<br><a name="Introduction"></a>
+
+{{>heading-indent}}Introduction
+
+MacroInt is a class that can interpolate macro-expressions in strings,
+object-properties and Array-elements.
+
+Macros-expressions are strings (or part of strings) that have the format:
+
+```js
+${<macroKey> [ | <modifier>[:<modifier-option>] [ | <modifier> [ |...]]]}
+```
+
+The <[macroKey](#macrokey)> is (usually) replaced with the value of a property of
+the same name of a [Repository](#repository).
+<[Modifiers](#modifier)> provide additional functionality.
+Macros can be mixed with "normal Text". One string can contain an unlimited number
+of macros. Macros can include embedded macros to build a macroKey from other macros.
+
+### Basic examples
+
+```js
+const MacroInt = require("macroint")
+
+// Create an instance of MacroInt and provide the object that contains the macroKey-results.
+mi = new MacroInt({ url: "localhost", user: { name: "Tom" }, id: 123 })
+
+// The whole expression is a macro
+console.log(mi.resolve("${url}")) // => localhost
+
+// Multiple macros in one string & macro with property-path (user.name) and modifier (upper)
+console.log(mi.resolve("Name='${user.name | upper}', id=${id}.")) // => Name='TOM', id=123.
+
+// Use the default 'unknown' because macroKey (xxx) is undefined.
+console.log(mi.resolve("xxx is ${xxx | default: 'unknown'}")) // => xxx is unknown
+
+// Throw an error because macro-result for xxx is 'undefined'
+try {
+    console.log(mi.resolve("${xxx | mandatory}"))
+} catch (e) {
+    console.log(e) // => Error: Undefined result for mandatory expression. <== ${xxx | mandatory}
+}
+```
+
+### Macros in Object example
+
+MacroInt can also resolve macros in all property-values of an object.
+If the value of a property is again an object or array this value is handled
+recursively. If the provided object is an array all it's elements are handled.
+
+```js
+// Assume we have a .env-file and it was loaded into process.env (e.g. via dotenv-extension).
+// (Note: For this example we simulate the .env-file)
+process.env.url = "www.github.com"
+process.env.user_name = "Tom"
+
+// Instead of providing the repository to the constructor register it separately.
+mi = new MacroInt()
+ml.registerRepository(process.env)
+
+config = {
+    url: "${url}",
+    user: "${user_name}",
+    options: {
+        id: "${id | default: '-1'| toNumber}",
+    },
+}
+mi.resolve(config)
+console.log(config) // {url: 'www.github.com', user: 'Tom', options: { id: -1 }}
+```
+
+* * *
+
+# Details and Concepts
+
+You can use MacroInt and it's main method .resolve() without knowing about the 
+details and extended possibilities by just studying the above examples. But to 
+get the best out of the this module the following chapters are very useful.
+
+{{#each (findBy this 'name' 'macroKey')}}{{>concept}}{{/each}}
+
+{{#each (findBy this 'name' 'Modifier')}}{{>concept}}{{/each}}
+
+{{#each (findBy this 'name' 'ModifierCallback')}}{{>concept}}{{/each}}
+
+{{#each (findBy this 'name' 'Error-Handling')}}{{>concept}}{{/each}}
+
+{{#each (findBy this 'name' 'Repository')}}{{>concept}}{{/each}}
+
+{{#each (findBy this 'name' 'MacroSymbols')}}{{>concept}}{{/each}}
+
+{{#each (findBy this 'name' 'Siblings-Templates')}}{{>concept}}{{/each}}
+
+* * *
+
+# API Documentation
+
+{{optionSet "global-index-format" "none"~}}
+{{!>main-index~}}
+{{>main}}
+
+# License
+
+{{rawinclude 'LICENSE'}}
+
+{{#each (package "badges")}}
+
+[{{@key}}]: {{replace this.base "{{name}}" (package "name")}}{{replace this.image "{{name}}" (package "name")}}
+[{{@key}}-url]: {{replace this.base "{{name}}" (package "name")}}{{replace this.url "{{name}}" (package "name")}}
+{{/each}}
