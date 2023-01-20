@@ -19,7 +19,7 @@ function basics() {
     try {
         console.log(mi.resolve("${xxx | mandatory}"))
     } catch (e) {
-        console.log(e) // => Error: Undefined result for mandatory expression. <== ${xxx | mandatory}
+        console.log(e) // => Error: The result of the mandatory expression is undefined. <== ${xxx | mandatory}
     }
 }
 
@@ -91,13 +91,12 @@ function otherModifiers() {
 }
 
 function ModifierCallback() {
-    const callback = (macroInt, macroValue, params) => {
-        if (typeof macroValue === "string" && macroValue) {
-            macroValue = macroValue.split("").reverse().join("")
+    MacroInt.registerModifier(
+        ["reverse", "-r"],
+        (macroInt, macroValue, params) => {
+            return ("" + macroValue).split("").reverse().join("")
         }
-        return macroValue
-    }
-    MacroInt.registerModifier(["reverse", "-r"], callback)
+    )
     const macroInt = new MacroInt({ macro: "Hello" })
     console.log(macroInt.resolve("${macro | -r}")) // expected: olleH
 }
@@ -130,5 +129,5 @@ function resolve() {
 // modifiers()
 // objectParams()
 // otherModifiers()
-// ModifierCallback()
-resolve()
+ModifierCallback()
+// resolve()

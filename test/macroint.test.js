@@ -14,13 +14,55 @@ describe("MacroInt module", function () {
     /** @type {Object} */
     let originalModifiers
 
-    describe("Modifiers", function () {
-        def_callback = () => {}
-        beforeEach(() => {
-            // As we don't publish the Modifiers-class we need to create one this way
-            // modifiers = MacroInt._modifiers
-        })
+    // Helper function to test the given errors against the expected ones
+    function checkErrors(expected) {
+        const miErrors = macroInt.errors
+        if (expected) {
+            assert(
+                miErrors.length > 0,
+                "No Errors occurred, although one was expected"
+            )
+            assert.isArray(
+                expected,
+                "Expected Errors values have to be an array!"
+            )
+            for (let index = 0; index < expected.length; index++) {
+                expectedEntry = expected[index]
+                miErrorsEntry = miErrors[index]
+                if (Array.isArray(expectedEntry)) {
+                    for (let expectedSubEntry of expectedEntry) {
+                        assert.include(
+                            miErrorsEntry,
+                            expectedSubEntry,
+                            "Expected and actual Errors don't match\n"
+                        )
+                    }
+                } else {
+                    assert.include(
+                        miErrorsEntry,
+                        expectedEntry,
+                        "Expected and actual Errors don't match\n"
+                    )
+                }
+            }
+        } else {
+            assert(
+                miErrors.length === 0,
+                "Errors occurred, but none was expected"
+            )
+        }
+    }
 
+    // Standard-function for testing macros
+    function testMacro(expression, expectedResult, expectedErrors = undefined) {
+        result = macroInt.resolve(expression)
+
+        checkErrors(expectedErrors)
+        assert.equal(result, expectedResult)
+    }
+
+    describe("Register Modifiers", function () {
+        def_callback = () => {}
         it(".register - string", function () {
             MacroInt.registerModifier("New", def_callback)
             assert.equal(MacroInt._modifiers.new, def_callback)
@@ -64,126 +106,6 @@ describe("MacroInt module", function () {
                 MacroInt.registerModifier("new", "not a function")
             }).to.throw(/Invalid callback-parameter.*/)
         })
-
-        it("Default-Modifiers (mandatory, default, upper, lower, toNum, toBool)", function () {
-            macroInt = new MacroInt({ macro: "macro_result" })
-
-            // [keyword(s), modifier-parameter(s), macro-value, expected-Result, [expected error-text]]
-            ;[
-                [["Mandatory", "-m"], undefined, "with_result", "with_result"],
-                [["Mandatory", "-m"], undefined, "", ""],
-                [["Mandatory", "-m"], undefined, 123, 123],
-                [["Mandatory", "-m"], undefined, 0, 0],
-                [
-                    ["Mandatory", "-m"],
-                    undefined,
-                    undefined,
-                    undefined,
-                    "Undefined result for mandatory expression.",
-                ],
-                [["default", "-d"], "<default>", "default", "default"],
-                [["default", "-d"], "macro", undefined, "macro_result"],
-                [["default", "-d"], "'<default>'", undefined, "<default>"],
-                [["default", "-d"], undefined, undefined, undefined],
-                [["upper", "-u"], undefined, "toUpperCase", "TOUPPERCASE"], // spell: ignore TOUPPERCASE
-                [["lower", "-l"], undefined, "toLowerCase", "tolowercase"], // spell: ignore tolowercase
-                // emptyArray doesn't work here because it uses MacroInt.isOneMacro()
-                // [["emptyArray"], undefined, "emptyArray", ["emptyArray"]],
-                // [["emptyArray"], undefined, undefined, []],
-                [
-                    [["-u", "-d", "lower"]],
-                    [undefined, "'DEFAULT'"],
-                    undefined,
-                    "default",
-                ],
-                [
-                    [["-d", "-u"]],
-                    ["'default'", undefined],
-                    undefined,
-                    "DEFAULT",
-                ],
-                [["toNumber", "toNum", "-tn"], undefined, "123", 123],
-                [["toNumber", "toNum", "-tn"], undefined, 123, 123],
-                [["toNumber", "toNum", "-tn"], "456", "x123", 456],
-                [
-                    ["toNumber", "toNum", "-tn"],
-                    undefined,
-                    "x123",
-                    0,
-                    'modifier toNumber: Unable to convert the macro-value "x123" to a number.',
-                ],
-                [["toBoolean", "toBool", "-tb"], undefined, "True", true],
-                [["toBool"], undefined, "false", false],
-                [["toboolean"], undefined, "", false],
-                [["-tb"], undefined, "0", false],
-                [["toBoolean"], undefined, "123", true],
-                [["toBoolean"], undefined, 1, true],
-                [["toBoolean"], undefined, 0, false],
-                [["toBoolean"], undefined, true, true],
-                [["toBoolean"], undefined, false, false],
-                [["toBoolean"], undefined, {}, true],
-                [["toBoolean"], undefined, [], true],
-            ].forEach((subTest) => {
-                keyWords =
-                    typeof subTest[0] == "string" ? [subTest[0]] : subTest[0]
-                keyWords.forEach((keyWord) => {
-                    if (Array.isArray(keyWord)) {
-                        _foundModifiers = []
-                        keyWord.forEach((key, index) => {
-                            _foundModifiers.push({
-                                key: key,
-                                params: subTest[1][index],
-                            })
-                        })
-                    } else
-                        _foundModifiers = [
-                            {
-                                key: keyWord,
-                                params: subTest[1],
-                            },
-                        ]
-                    result = macroInt._execModifiers(
-                        _foundModifiers,
-                        subTest[2]
-                    )
-                    if (subTest[4]) {
-                        assert.isTrue(
-                            macroInt.errors.includes(subTest[4]),
-                            subTest.toString()
-                        )
-                    }
-                    if (Array.isArray(subTest[3])) {
-                        expect(result).deep.to.equal(
-                            subTest[3],
-                            subTest.toString()
-                        )
-                    } else {
-                        assert.equal(result, subTest[3], subTest.toString())
-                    }
-                })
-            })
-        })
-
-        it("Custom modifier", function () {
-            macroInt = new MacroInt({ macro: "macro_result" })
-
-            MacroInt.registerModifier(
-                ["Custom", "-c"],
-                (macroInt, macroValue, params) => {
-                    assert.isTrue(macroInt instanceof MacroInt)
-                    assert.isTrue(params === "<params>")
-                    return "4321"
-                }
-            )
-            _foundModifiers = [{ key: "-c", params: "<params>" }]
-            assert.equal(
-                macroInt._execModifiers(_foundModifiers, "1234"),
-                "4321"
-            )
-
-            // reset!
-            MacroInt.unregisterModifier(["-c", "custom"])
-        })
     })
 
     describe("MacroInt class", function () {
@@ -198,10 +120,6 @@ describe("MacroInt module", function () {
                 assert.equal(
                     macroInt._usedSymbols.siblingsTemplateKey,
                     "$template"
-                )
-                assert.equal(
-                    macroInt._usedSymbols.resultForUndefinedValues,
-                    "$$-undefined-$$"
                 )
 
                 assert.isTrue(Array.isArray(macroInt._repositories))
@@ -251,27 +169,29 @@ describe("MacroInt module", function () {
                     { x: 123 },
                     {
                         symbols: {
-                            macroBegin: "1",
-                            macroEnd: "2",
-                            modifierSeparator: "3",
-                            modifierParamSeparator: "4",
-                            propertyPathIndicator: "5",
-                            siblingsTemplateKey: "6",
-                            resultForUndefinedValues: "7",
+                            macroBegin: "111",
+                            macroEnd: "222",
+                            modifierSeparator: "333",
+                            modifierParamSeparator: "444",
+                            propertyPathIndicator: "555",
+                            siblingsTemplateKey: "666",
                         },
+                        throwErrors: false,
                     }
                 )
 
-                assert.equal(macroInt._usedSymbols.macroBegin, "1")
-                assert.equal(macroInt._usedSymbols.macroEnd, "2")
-                assert.equal(macroInt._usedSymbols.modifierSeparator, "3")
-                assert.equal(macroInt._usedSymbols.modifierParamSeparator, "4")
-                assert.equal(macroInt._usedSymbols.propertyPathIndicator, "5")
-                assert.equal(macroInt._usedSymbols.siblingsTemplateKey, "6")
+                result = macroInt.resolve("111 x 333 -d 444 5551 222")
+                assert.equal(result, 123)
+
+                assert.equal(macroInt._usedSymbols.macroBegin, "111")
+                assert.equal(macroInt._usedSymbols.macroEnd, "222")
+                assert.equal(macroInt._usedSymbols.modifierSeparator, "333")
                 assert.equal(
-                    macroInt._usedSymbols.resultForUndefinedValues,
-                    "7"
+                    macroInt._usedSymbols.modifierParamSeparator,
+                    "444"
                 )
+                assert.equal(macroInt._usedSymbols.propertyPathIndicator, "555")
+                assert.equal(macroInt._usedSymbols.siblingsTemplateKey, "666")
             })
         })
 
@@ -292,11 +212,15 @@ describe("MacroInt module", function () {
             it("options.throwErrors", function () {
                 macroInt = new MacroInt({ x: 123 }, { throwErrors: false })
                 assert.isFalse(macroInt._throwErrors)
-                expect(() => macroInt.resolve("${x | unknown}")).to.not.throw()
+                expect(() =>
+                    macroInt.resolve("${x | unknown-Modifier}")
+                ).to.not.throw()
 
                 macroInt = new MacroInt({ x: 123 }, { throwErrors: true })
                 assert.isTrue(macroInt._throwErrors)
-                expect(() => macroInt.resolve("${x | unknown}")).to.throw()
+                expect(() =>
+                    macroInt.resolve("${x | unknown-Modifier}")
+                ).to.throw()
             })
             it("options.throwErrors - auto-reset errors", function () {
                 macroInt._throwErrors = true
@@ -328,8 +252,17 @@ describe("MacroInt module", function () {
             })
             it(".isOneMacro", function () {
                 assert.isFalse(macroInt.isOneMacro())
-                macroInt.resolve('${"hello"}')
-                assert.isTrue(macroInt.isOneMacro())
+                // Function is only valid inside of __interpolate (and so it's
+                // valid in the modifier-callbacks the function was created for)
+                let savedIsOneMacro = ""
+                MacroInt.registerModifier("test", (macroInt, macroValue) => {
+                    savedIsOneMacro = macroInt.isOneMacro()
+                    return macroValue
+                })
+                macroInt.resolve('${"hello" | test}')
+                assert.isTrue(savedIsOneMacro)
+                macroInt.resolve('_${"hello" | test}_')
+                assert.isFalse(savedIsOneMacro)
             })
             it(".addError", function () {
                 macroInt.addError("1")
@@ -355,41 +288,16 @@ describe("MacroInt module", function () {
                 macroInt.addError("eee")
                 assert.equal(
                     macroInt.toString(),
-                    header + "\n  Error: eee <== 000  (@Property: p1.p2)"
+                    header + "\n  Error: eee <== 000  (@property: p1.p2)"
                 )
                 macroInt.addError("eee2")
                 assert.equal(
                     macroInt.toString(),
                     header +
                         "\n  Errors (2):" +
-                        "\n    eee <== 000  (@Property: p1.p2)" +
-                        "\n    eee2 <== 000  (@Property: p1.p2)"
+                        "\n    eee <== 000  (@property: p1.p2)" +
+                        "\n    eee2 <== 000  (@property: p1.p2)"
                 )
-            })
-            describe(".isUndefined", function () {
-                it("symbol_ResultForUndefinedValues", function () {
-                    assert.equal(
-                        macroInt._usedSymbols.resultForUndefinedValues,
-                        "$$-undefined-$$"
-                    )
-                })
-                it("undefined returns true", function () {
-                    assert(macroInt.isUndefined(undefined))
-                })
-                it("Property .resultForUndefinedValue returns true", function () {
-                    assert(
-                        macroInt.isUndefined(macroInt.resultForUndefinedValue)
-                    )
-                })
-                it("Partial value returns true", function () {
-                    assert(
-                        macroInt.isUndefined(
-                            "??." +
-                                macroInt._usedSymbols.resultForUndefinedValues +
-                                ".??"
-                        )
-                    )
-                })
             })
         })
 
@@ -445,11 +353,149 @@ describe("MacroInt module", function () {
                 assert.equal(macroInt.getValue("p1.p2.p3")["value"], "Test")
                 assert.isUndefined(macroInt.getValue("p1.p2.does_not_exist"))
             })
+            it("getValue(xxx, assumeString=true)", function () {
+                macroInt = new MacroInt()
+                assert.equal(macroInt.getValue("value"), undefined)
+                assert.equal(macroInt.getValue("value", false), undefined)
+                assert.equal(macroInt.getValue("value", true), "value")
+            })
+        })
+
+        describe("Modifiers", function () {
+            it("Custom Callback & Callback-Parameters", function () {
+                macroInt = new MacroInt()
+
+                MacroInt.registerModifier(["Custom", "-c"], (...params) => {
+                    assert.equal(params.length, 3)
+                    assert.isTrue(params[0] instanceof MacroInt)
+                    assert.isTrue(params[1] === "macroValue")
+                    assert.isTrue(params[2] === "<params>")
+                    return "4321"
+                })
+
+                result = macroInt.resolve("${'macroValue'|custom:<params>}")
+                assert.equal(result, "4321")
+                // reset!
+                MacroInt.unregisterModifier(["-c", "custom"])
+            })
+
+            function modifierTest(
+                modifiers,
+                macroValue,
+                expectedResult,
+                expectedErrorText
+            ) {
+                macroInt = new MacroInt(
+                    {
+                        macro: "result",
+                        123: 123,
+                        0: 0,
+                        1: 1,
+                        true: true,
+                        false: false,
+                        obj: {},
+                        arr: [],
+                    },
+                    { throwErrors: false }
+                )
+
+                modifiers.forEach((modifier, testIndex) => {
+                    const errorText = `${testIndex}. Test: modifier: ${modifier}, macroValue: ${macroValue}}`
+                    const macro = "${" + macroValue + " | " + modifier + "}"
+                    result = macroInt.resolve(macro)
+                    assert.equal(result, expectedResult, errorText)
+                    if (expectedErrorText) {
+                        assert.isDefined(
+                            macroInt.errors.find((text) =>
+                                text.includes(expectedErrorText)
+                            ),
+                            errorText
+                        )
+                    }
+                })
+            }
+
+            it("Standard-Modifiers: mandatory", function () {
+                modifierTest(
+                    ["Mandatory ", "-m"],
+                    "'with_result'",
+                    "with_result"
+                )
+                modifierTest(["Mandatory", "-m"], "''", "")
+                modifierTest([" Mandatory", " -m "], 123, 123)
+                modifierTest(["Mandatory", "-m"], 0, 0)
+                modifierTest(
+                    ["Mandatory", "-m"],
+                    undefined,
+                    undefined,
+                    "The result of the mandatory expression is undefined."
+                )
+            })
+            it("Standard-Modifiers: default", function () {
+                modifierTest(["default: ??", "-d: ??"], "macro", "result")
+                modifierTest(["default:macro", "-d:macro"], undefined, "result")
+                modifierTest(
+                    ["default:'String'", "-d:'String'"],
+                    undefined,
+                    "String"
+                )
+                modifierTest(
+                    ["default:??", "-d:??"],
+                    undefined,
+                    undefined,
+                    "The default-"
+                )
+                modifierTest(
+                    ["default", "-d"],
+                    undefined,
+                    undefined,
+                    "The default-"
+                )
+            })
+            it("Standard-Modifiers: upper", function () {
+                modifierTest(["upper", "-u"], "'test'", "TEST")
+            })
+            it("Standard-Modifiers: upper", function () {
+                modifierTest(["lower", "-l"], "'TEST'", "test")
+            })
+            it("Standard-Modifiers: toNum", function () {
+                modifierTest(["toNumber", "toNum", "-tn"], "123", 123)
+                modifierTest(["toNumber", "toNum", "-tn"], 123, 123)
+                modifierTest(["toNumber", "toNum", "-tn"], true, 1)
+                modifierTest(["toNumber:-1", "toNum:-1", "-tn:-1"], "'xxx", -1)
+                modifierTest(
+                    ["toNumber:x6", "toNum:x6", "-tn:x6"],
+                    "x",
+                    0,
+                    "modifier toNumber:"
+                )
+            })
+            it("Standard-Modifiers: toBool", function () {
+                modifierTest(["toBoolean", "toBool", "-tb"], "'True'", true)
+                modifierTest(["TOBOOL"], "'false'", false)
+                modifierTest(["toboolean"], "", false)
+                modifierTest(["-tb"], "0", false)
+                modifierTest(["toBoolean"], "123", true)
+                modifierTest(["toBoolean"], 1, true)
+                modifierTest(["toBoolean"], 0, false)
+                modifierTest(["toBoolean"], true, true)
+                modifierTest(["toBoolean"], false, false)
+                modifierTest(["toBoolean"], "obj", true)
+                modifierTest(["toBoolean"], "arr", true)
+            })
+            it("Standard-Modifiers:: 'combined'", function () {
+                modifierTest(
+                    ["-u | -d : 'DEFAULT'| lower"],
+                    undefined,
+                    "default"
+                )
+                modifierTest([["-d: 'default'|-u"]], undefined, "DEFAULT")
+            })
         })
 
         describe(".resolve - String", function () {
             let macro
-            const UNDEFINED_VALUE = "<undefined!>"
+            const UNDEFINED_VALUE = "" + undefined
             beforeEach(() => {
                 macroInt = new MacroInt({
                     macro: "macro_result",
@@ -468,62 +514,7 @@ describe("MacroInt module", function () {
                 // Most test check for undefined
                 macroInt._throwErrors = false
                 macroInt._propertyPath = ["L0", "L1", "L2", "L3", "L4"]
-                // set an alternate value
-                macroInt._usedSymbols.resultForUndefinedValues = UNDEFINED_VALUE
             })
-            // Helper function to test the given errors against the expected ones
-            function _checkArrays(title, found, expected) {
-                if (expected) {
-                    assert(
-                        found.length > 0,
-                        "No " + title + " occurred, although one was expected"
-                    )
-                    assert.isArray(
-                        expected,
-                        "Expected " + title + " values have to be an array!"
-                    )
-                    for (let index = 0; index < expected.length; index++) {
-                        expectedEntry = expected[index]
-                        foundEntry = found[index]
-                        if (Array.isArray(expectedEntry)) {
-                            for (let expectedSubEntry of expectedEntry) {
-                                assert.include(
-                                    foundEntry,
-                                    expectedSubEntry,
-                                    "Expected and actual " +
-                                        title +
-                                        " don't match\n"
-                                )
-                            }
-                        } else {
-                            assert.include(
-                                foundEntry,
-                                expectedEntry,
-                                "Expected and actual " +
-                                    title +
-                                    " don't match\n"
-                            )
-                        }
-                    }
-                } else {
-                    assert(
-                        !found.length,
-                        title + " occurred, but none was expected"
-                    )
-                }
-            }
-            // Standard-function for testing macros
-            function testMacro(
-                expression,
-                expectedResult,
-                expectedErrors = undefined
-            ) {
-                result = macroInt.resolve(expression)
-
-                _checkArrays("Errors", macroInt.errors, expectedErrors)
-                assert.equal(result, expectedResult)
-            }
-
             //--------------------------------------------------------------------
             // Tests
             it("options parameter throw error", () => {
@@ -570,10 +561,13 @@ describe("MacroInt module", function () {
             it("mixed 'good' and invalid macro-expressions", function () {
                 testMacro(
                     "x ${ macro }/${macro2}/${macro[2]}/${[2]}/${macro3[1]",
-                    "x macro_result/macro2_result/<undefined!>/<undefined!>/${macro3[1]"
+                    "x macro_result/macro2_result/undefined/undefined/${macro3[1]"
                 )
             })
             it("escaped (\\${...}) macro-expressions", function () {
+                testMacro("\\a", "a")
+                testMacro("\\${}", "${}")
+                testMacro("\\", "")
                 testMacro(
                     "/ escaped :\\${macro\\}, \\\\${macro1}\\, \\ ${macro2}",
                     "/ escaped :${macro}, \\macro1_result,  macro2_result"
@@ -619,7 +613,12 @@ describe("MacroInt module", function () {
             // Nested macros
             it("Nested macro #1", function () {
                 // build the name "parent1_macro" and use this as a macro-name
-                testMacro("${${'parent'}${'1'}${'_macro'}}", "Parent1_Macro")
+                testMacro(
+                    "${'hello'}_${par${'ent'}${'1'}_${'macro'}}",
+                    // => "hello_${parent1_macro}"
+                    // => "hello_Parent1_Macro"
+                    "hello_Parent1_Macro"
+                )
             })
             it("Nested macro #2", function () {
                 // build the name "parent_" + ${macro} = "macro_result" => ${parent_macro_result} => "Parent_Macro_Result",
@@ -632,6 +631,16 @@ describe("MacroInt module", function () {
                 testMacro("${${^-3}_macro}_outside", "l2_Macro_Result_outside")
                 // the same with propertyPath-element #2 from the beginning
                 testMacro("${${^2}_macro}_outside", "l2_Macro_Result_outside")
+            })
+            it("Nested macro #4", function () {
+                testMacro("_${'123'}/${'456'}${'789'}_", "_123/456789_")
+            })
+            it("Nested macro #5", function () {
+                testMacro('_${"${"123"}"}_', "_123_")
+            })
+            it("Nested macro #6", function () {
+                // _${${'${'${'m'}a'}c'}ro}_ => _${${'${'ma'}c'}ro}_ => _${${'mac'}ro}_ => _${maaro}_ => _macro_result_
+                testMacro("_${${'${'${'m'}a'}c'}ro}_", "_macro_result_")
             })
             it("recursive macro expansion", function () {
                 // ${recursive1} => ${recursive2} => ${recursive3} => ${recursive4} => "recursive4"
@@ -651,13 +660,23 @@ describe("MacroInt module", function () {
                 })
                 testMacro("${${recursive1} | -d:'default'}", "default")
             })
+            it("recursive with default as a macro", function () {
+                // ${recursive1} => ${recursive2} => ${recursive3} => undefined | -d:'default' => 'default'
+                result = "recursive2"
+                macroInt.registerRepository({
+                    recursive1: "${recursive2}",
+                    recursive2: result,
+                })
+                testMacro("${${unknown} | -d:${recursive2}}", result)
+            })
+
             // Mandatory macros
             it("mandatory macros - undefined -> ok", function () {
                 testMacro("${macro|mandatory}", "macro_result")
             })
             it("mandatory macros - undefined -> error", function () {
                 testMacro("${macro_| -m}", undefined, [
-                    "Undefined result for mandatory expression.",
+                    "The result of the mandatory expression is undefined.",
                 ])
             })
             it("Modifier emptyArray", function () {
@@ -684,7 +703,8 @@ describe("MacroInt module", function () {
             it("macro-defaults - multiple defaults", function () {
                 testMacro(
                     "${ma_ | -d:ma_ | -d: ma_| -d:ma_ | -d:ma_ | -d:ma_ | -d:ma_ | -d:ma_ | -d:ma_ | -d:macro}",
-                    "macro_result"
+                    "macro_result",
+                    ['The default-value "ma_"'] // multiple errors
                 )
             })
             it("chained macros - mixed macro & path", function () {
@@ -696,7 +716,8 @@ describe("MacroInt module", function () {
                 testMacro('${macro__ | -d:"default"}', "default")
                 testMacro(
                     "${macro__ | -d: macro2__ |  -d:macro3__ | -d: macro4__ | -d: 'default'}",
-                    "default"
+                    "default",
+                    ['The default-value "']
                 )
             })
             it("chained macros - with macro after default-string", function () {
@@ -713,7 +734,8 @@ describe("MacroInt module", function () {
             })
             it("chained macros - mandatory error", function () {
                 testMacro("${macro__|default:macro__|-m}", undefined, [
-                    "Undefined result for mandatory expression.",
+                    'The default-value "',
+                    "The result of the mandatory expression is undefined.",
                 ])
             })
             it("chained macros - multiple results with mandatory", function () {
@@ -721,19 +743,24 @@ describe("MacroInt module", function () {
             })
             it("chained macros - multiple mandatory & error", function () {
                 testMacro("${macro__| -d:macro__|-m}", undefined, [
-                    "Undefined result for mandatory expression.",
+                    'The default-value "',
+                    "The result of the mandatory expression is undefined.",
                 ])
             })
             it("chained macros - mandatory ok", function () {
                 testMacro(
                     "${macro__ |-d:macro1__ |-d:macro2__ |-d:macro3__ |-d:macro3| -m}",
-                    "macro3_result"
+                    "macro3_result",
+                    ['The default-value "']
                 )
             })
-            it("chained macros - mandatory error", function () {
+            it("fndatory error", function () {
                 macro = "${macro__ |-d:macro1__ |-d:macro2__ |-d:macro3__| -m}"
                 testMacro(macro, undefined, [
-                    [macro, "Undefined result for mandatory expression."],
+                    [macro, 'The default-value "macro1'],
+                    'The default-value "macro2',
+                    'The default-value "macro3',
+                    "The result of the mandatory expression is undefined.",
                 ])
             })
             it("modifiers - trailing |", function () {
@@ -757,7 +784,7 @@ describe("MacroInt module", function () {
                 testMacro(macro, undefined, [
                     [macro, 'Unknown modifier "$'],
                     'Unknown modifier "$-1"',
-                    "Undefined result for mandatory expression.",
+                    "The result of the mandatory expression is undefined.",
                 ])
             })
             it("Constant value after constant value", function () {
@@ -917,12 +944,15 @@ describe("MacroInt module", function () {
                 assert.equal(obj.url, "localhost")
             })
             it("Multiple undefined and mandatory", () => {
-                obj = { url: "${unknown|-d:unknown2|-d:unknown3| -m} " }
-                expect(() => {
-                    macroInt.resolve(obj)
-                }).to.throw(
-                    /.*Error: Undefined result for mandatory expression.*/
-                )
+                macroInt._throwErrors = false
+                obj = { url: "${unknown|-d:unknown2|-d:unknown3| -m}" }
+                macroInt.resolve(obj)
+                checkErrors([
+                    'The default-value "unknown2"',
+                    'The default-value "unknown3"',
+                    "The result of the mandatory expression is undefined.",
+                ])
+                assert.equal(obj.url, undefined)
             })
 
             it("Refer to the own-property-name", () => {
@@ -1035,7 +1065,7 @@ describe("MacroInt module", function () {
                 expect(() => {
                     macroInt.resolve(obj)
                 }).to.throw(
-                    /.*Error: Undefined result for mandatory expression.*/
+                    /.*Error: The result of the mandatory expression is undefined.*/
                 )
             })
             it("Complex Object", () => {

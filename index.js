@@ -142,16 +142,14 @@
  * @see MacroInt.registerModifier
  * @example
  * ```js
- * const callback = (macroInt, macroValue, params) => {
- *     if (typeof macroValue === "string" && macroValue) {
- *        macroValue = macroValue.split("").reverse().join("")
+ * MacroInt.registerModifier(
+ *     ["reverse", "-r"],
+ *     (macroInt, macroValue, params) => {
+ *         return ("" + macroValue).split("").reverse().join("")
  *     }
- *     return macroValue
- * }
- * MacroInt.registerModifier(["reverse", "-r"], callback)
- *
+ * )
  * const macroInt = new MacroInt({ macro: "Hello" })
- * console.log(macroInt.resolve("${macro | -r}"))   // expected: olleH
+ * console.log(macroInt.resolve("${macro | -r}")) // expected: olleH
  * ```
  */
 
@@ -182,19 +180,18 @@
  * The `MacroSymbols` is an object that has a couple of properties that define
  * the string-indicators used to identify the different parts of a macro.\
  * \
- * The `MacroSymbols` used by the `MacroInt` can be modified by either change
+ * The `MacroSymbols` used by `MacroInt` can be modified by either change
  * the static MacroInt.defaultSymbols (which is **dangerous** because all other
  * modules using `MacroInt` are affected). The other way is to provide an object
  * with some or all of the defined symbols to the options.symbols parameter of
  * the MacroInt-constructor.
  *
- * @property {String} macroBegin - Indicates the begin of a macro inside of an expression. Must be a non-empty string. Default: "${"
- * @property {String} macroEnd - String that indicates the end of a macro inside an expression. Must be a non-empty string. Default: "}"
- * @property {String} modifierSeparator - String that separates the regular macroKey and modifier(s). Must be a non-empty string. Default: "\|"
- * @property {String} modifierParamSeparator - String that's used as a separator between one modifier and it's optional parameters. Must be a non-empty string. Default: ":"
- * @property {String} propertyPathIndicator - String to identify expressions that will be interpolated with the name of one of the parent-nodes of the current entry. (By default only used if `.resolve` is called with an object-parameter.) "^"
- * @property {String} siblingsTemplateKey - String that identifies a property in an object that is used as an template for all siblings [siblings-templates](#siblings-templates) of that entry. "$template"
- * @property {String} resultForUndefinedValues - String that's used as a macro-result if the value of a macro is `undefined`. "$$-undefined-$$"
+ * @property {String} [macroBegin=${] - Indicates the begin of a macro inside of an expression. Must be a non-empty string.
+ * @property {String} [macroEnd=}] -  String that indicates the end of a macro inside an expression. Must be a non-empty string.
+ * @property {String} [modifierSeparator=\|] - String that separates the regular macroKey and modifier(s). Must be a non-empty string.
+ * @property {String} [modifierParamSeparator=:] - String that's used as a separator between one modifier and it's optional parameters. Must be a non-empty string.
+ * @property {String} [propertyPathIndicator=^] - String to identify expressions that will be interpolated with the name of one of the parent-nodes of the current entry. (By default only used if `.resolve` is called with an object-parameter.)
+ * @property {String} [siblingsTemplateKey=$template] - String that identifies a property in an object that is used as an template for all siblings [siblings-templates](#siblings-templates) of that entry.
  */
 
 /**
@@ -227,6 +224,8 @@
  * @private
  * @description
  * The sibling templates allow the definition of all necessary entries for all sibling-objects.
+ *
+ * TODO: Build documentation
  */
 
 /**
@@ -269,7 +268,6 @@ class MacroInt {
         modifierParamSeparator: ":",
         propertyPathIndicator: "^",
         siblingsTemplateKey: "$template",
-        resultForUndefinedValues: "$$-undefined-$$",
     }
 
     /**
@@ -390,7 +388,47 @@ class MacroInt {
     *
     * If the whole expression is one macro then the result can of be any type.
     * Otherwise macros are converted to strings and inserted in the expression.
-    *
+    * 
+    * Plan:
+    *   "${'hello'}_${par${'ent'}${'1'}_${'macro'}}" =>> "hello_${parent1_macro}" =>> hello_Parent1_Macro
+    *   
+    *    ${ : macroResult += expression.substring(lastExpressionIndex, charIndex-1) = "" + ""
+    *       : push status to stack && reset status
+    *       : macroResult = ""
+    *             } : macroResult += expression.substring(lastExpressionIndex, charIndex-1) === ""
+    *               : resolve => macroResult += "hello" === "hello"
+    *               : pop stack 
+    *               : macroResult += stack.macroResult + macroResult  === "hello"
+    *              _ : skip
+    *               ${ : macroResult += expression.substring(lastExpressionIndex, charIndex-1) === "hello" + "_"
+    *                  : push status to stack && reset status
+    *                  : macroResult = ""
+    *                    ${ : add to macroPartsStack, lastExpressionIndex=charIndex, macroResult = ""
+    *                       : push status to stack && reset status
+    *                       : macroResult = ""
+    *                         macroResult += expression.substring(lastExpressionIndex, charIndex-1) = "" + "par"
+    *                           } : macroResult += expression.substring(lastExpressionIndex, charIndex-1) === ""
+    *                             : resolve => macroResult += "hello" === "hello"
+    *                             : pop stack 
+    *                             : macroResult += stack.macroResult + macroResult  === "hello"
+    *                           } : resolve, add to macroResult (="par" + "ent")
+    *                               pop from macroPartsStack
+    *                               ? What shall I do with the macroResult and poped-macroResult & macroKey
+    *                            ${ : add to macroPartsStack, lastExpressionIndex=charIndex, macroResult = ""
+    *                                 macroResult += expression.substring(lastExpressionIndex, charIndex-1) = "1"
+    *                                 } : resolve, add to macroResult (="par" + "ent")
+    *                                     pop from macroPartsStack
+    *                                     ? What shall I do with the macroResult and poped-macroResult & macroKey
+    *                                   ${ : add to macroPartsStack, lastExpressionIndex=charIndex, macroResult = ""
+    *                                        macroResult += expression.substring(lastExpressionIndex, charIndex-1) = "par1" + "par"
+    *                                            } : resolve, add to macroResult (="par" + "ent")
+    *                                                pop from macroPartsStack
+    *                                                ? What shall I do with the macroResult and poped-macroResult & macroKey
+    *                                             } : resolve, add to macroResult (="par" + "ent")
+    *                                                 pop from macroPartsStack
+    *                                                 ? What shall I do with the macroResult and poped-macroResult & macroKey
+    *                           
+    * 
     * @private
     * @param {String} expression - The string which's macros will be interpolated.
     + @return {*} The interpolated expression.
@@ -399,7 +437,7 @@ class MacroInt {
         this._completeExpression = expression
         this._currentExpression = undefined
 
-        const macroPartsStack = []
+        const $this = this
         const symbols = this._usedSymbols
         // define constants for the character-codes of the symbols' first
         //  character to be able to make a fast-check before comparing the
@@ -409,189 +447,237 @@ class MacroInt {
         const macroBeginCode = symbols.macroBegin.charCodeAt(0)
         const macroEndCode = symbols.macroEnd.charCodeAt(0)
 
-        let charCode, charIndex, partStartIndex
-        let macroKey, macroParts, macroValue
-        let startIndex = -1
-        let foundModifiers = []
+        function __innerInterpolate(expression) {
+            const iOM = $this._isOneMacro
+            const cE = $this._currentExpression
+            const hC = $this._hasConstant
 
-        /**********************************************************************
-         * Adds everything between the partStartIndex and the charIndex
-         * @private
-         * @param {Number} symbolLength - Defines the number of characters to skip
-         */
-        function __appendNewPart(symbolLength) {
-            let newPart = expression.substring(partStartIndex, charIndex).trim()
+            const macroPartsStack = []
+            const expressionLength = expression.length
 
-            if (macroKey == undefined) {
-                // `.symbols.modifierParamSeparator` is not supported for the macro-part
-                macroKey = newPart
-            } else if (newPart) {
-                const index = newPart.indexOf(symbols.modifierParamSeparator)
-                let params
-                if (index > -1) {
-                    params = newPart
-                        .substring(
-                            index + symbols.modifierParamSeparator.length
-                        )
-                        .trim()
-                    // reassign the part before the parameters
-                    newPart = newPart.substring(0, index).trim()
+            let loopIndex, charCode, temp, macroValue
+            let macroParts = []
+            let expressionResult = ""
+            let macroStartIndex = -1
+            let lastExpressionIndex = 0
+
+            /**********************************************************************
+             * Adds everything between the `lastExpressionIndex` and the `loopIndex`.
+             * @note Uses variables of the enclosing function!
+             *
+             * @private
+             * @param {Number} symbolLength - Defines the number of characters to skip
+             */
+            function __appendTillLastExpressionIndex(symbolLength) {
+                if (lastExpressionIndex !== loopIndex) {
+                    temp = expression.substring(lastExpressionIndex, loopIndex)
+                    // Because it's always a string add without distinguishing the
+                    //  current content (unlike in resolve-macro)
+                    if (macroParts.length)
+                        macroParts[macroParts.length - 1] += temp
+                    else expressionResult += temp
                 }
-                foundModifiers.push({ key: newPart, params: params })
+                lastExpressionIndex = loopIndex + symbolLength
+                loopIndex = lastExpressionIndex - 1 // -1 because it's incremented in the for-loop
             }
-            partStartIndex = charIndex + symbolLength
-        }
-        //---------------------------------------------------------------------
+            //---------------------------------------------------------------------
 
-        // Use a for-loop over every single character(-code) instead of a regex-handler
-        //  because we want to be able to have _nested_ macros, escaped characters,...
-        for (charIndex = 0; charIndex < expression.length; charIndex++) {
-            charCode = expression.charCodeAt(charIndex)
+            /**
+             * Internal function to iterate through all found modifiers of a macro and
+             * execute the according callback.
+             * (It's a separate function because it's used in the tests directly.)
+             * @private
+             * @param {FoundModifier[]} macroParts - the current value of the interpolated macro.
+             * @param {*} macroValue - the current value of the interpolated macro.
+             * @returns {*} the new MacroValue after executing all found modifiers.
+             */
+            function __handleFoundModifiers() {
+                let fModKey, fModParam, fModSeparatorIndex
+                const separator = symbols.modifierParamSeparator
+                for (let i = 1, len = macroParts.length; i < len; i++) {
+                    fModKey = macroParts[i]
+                    if (fModKey === "") continue
 
-            if (charCode === escapeCharCode) {
-                // Escape a character
-                // -> Remove the escape-char itself ("\").
-                // -> therefor charIndex points to the escaped character itself
-                // -> With the next "for" it gets incremented and points to the character after the escaped character
-                expression =
-                    expression.substring(0, charIndex) +
-                    expression.substring(charIndex + 1)
-                //
-            } else if (charCode === modifierSeparatorCode) {
-                if (
-                    startIndex > -1 &&
-                    expression.substring(
-                        charIndex,
-                        charIndex + symbols.modifierSeparator.length
-                    ) === symbols.modifierSeparator
-                )
-                    // A new part of a macro-expression
-                    __appendNewPart(symbols.modifierSeparator.length)
-            } else if (charCode === macroBeginCode) {
-                if (
-                    expression.substring(
-                        charIndex,
-                        charIndex + symbols.macroBegin.length
-                    ) === symbols.macroBegin
-                ) {
-                    // Start a new macro expression
-
-                    // If we are already in a macro push that macro-information to the stack
-                    if (startIndex > -1) {
-                        macroPartsStack.push({
-                            partStartIndex: partStartIndex,
-                            startIndex: startIndex,
-                            macroKey: macroKey,
-                            foundModifiers: foundModifiers,
-                        })
-                    }
-                    foundModifiers = [] // Create a new array!
-
-                    partStartIndex = charIndex + symbols.macroBegin.length // start of the next part of a macro
-                    startIndex = charIndex // start of the macro-expression
-                    macroKey = undefined // the macro-expression (part before the first | or the complete macro)
-
-                    // Skip the start-indicator (-1 because the for() adds 1 in the next loop)
-                    charIndex = partStartIndex - 1
-                }
-            } else if (charCode === macroEndCode) {
-                if (
-                    startIndex > -1 && // only if we are in a macro
-                    expression.substring(
-                        // finally test the complete indicator
-                        charIndex,
-                        charIndex + symbols.macroEnd.length
-                    ) === symbols.macroEnd
-                ) {
-                    // Add the remaining string as a "part"
-                    __appendNewPart(symbols.macroEnd.length)
-
-                    // Transfer additional information
-                    this._currentExpression = expression.substring(
-                        startIndex,
-                        partStartIndex
-                    )
-                    this._isOneMacro = this._currentExpression === expression
-                    this._hasConstant = false
-
-                    // Resolve the macro itself
-                    macroValue = this.getValue(macroKey)
-                    // Apply/Exec all modifiers
-                    macroValue = this._execModifiers(foundModifiers, macroValue)
-
-                    if (macroValue === undefined && !this._allowUndefined)
-                        // Add the error-message and don't replace the macro
-                        this.addError("macro-value is undefined.")
-                    else if (this._isOneMacro)
-                        // if the whole expression is one macro then return the value as it is
-                        return macroValue
-                    else {
-                        if (macroValue === undefined)
-                            macroValue = symbols.resultForUndefinedValues
-                        else if (typeof macroValue !== "string")
-                            macroValue = "" + macroValue
-
-                        // Insert the resolved macro into the Expression
-                        expression =
-                            expression.substring(0, startIndex) +
-                            macroValue +
-                            expression.substring(partStartIndex)
-
-                        // If the replacement contains a macro scan the just
-                        // replaced macro again otherwise continue scanning
-                        // after the replaced macro.
-                        charIndex =
-                            startIndex +
-                            (macroValue.includes(symbols.macroBegin)
-                                ? -1
-                                : macroValue.length - 1)
-                    }
-
-                    macroParts = macroPartsStack.pop()
-                    if (macroParts) {
-                        partStartIndex = macroParts.partStartIndex
-                        startIndex = macroParts.startIndex
-                        macroKey = macroParts.macroKey
-                        foundModifiers = macroParts.foundModifiers
+                    // split the Parameters idf provided
+                    fModParam = undefined
+                    fModSeparatorIndex = fModKey.indexOf(separator)
+                    if (fModSeparatorIndex > -1) {
+                        fModParam = fModKey
+                            .substring(fModSeparatorIndex + separator.length)
+                            .trim()
+                        // reassign the part before the parameters
+                        fModKey = fModKey
+                            .substring(0, fModSeparatorIndex)
+                            .trim()
+                            .toLowerCase()
                     } else {
-                        macroKey = undefined // Important for appendNewPart()
-                        startIndex = -1 // Not in a macro anymore
+                        fModKey = fModKey.trim().toLowerCase()
                     }
-                }
-            } // macro-end character found
-        } // for expressionIndex...
 
-        this._currentExpression = undefined
-        return expression
-    }
+                    // Is the modifier registered?
+                    if (MacroInt._modifiers.hasOwnProperty(fModKey)) {
+                        // The value that's assigned to the modifier-searchKey is the callback
+                        macroValue = MacroInt._modifiers[fModKey](
+                            $this,
+                            macroValue,
+                            fModParam
+                        )
+                    } else
+                        $this.addError(
+                            `Unknown modifier "${macroParts[i].trim()}"`
+                        )
+                } // eval macroParts
+            }
+            //---------------------------------------------------------------------
 
-    /**
-     * Internal function to iterate through all found modifiers of a macro and
-     * execute the according callback.
-     * (It's a separate function because it's used in the tests directly.)
-     * @private
-     * @param {FoundModifier[]} foundModifiers - the current value of the interpolated macro.
-     * @param {*} macroValue - the current value of the interpolated macro.
-     * @returns {*} the new MacroValue after executing all found modifiers.
-     */
-    _execModifiers(foundModifiers, macroValue) {
-        // Execute all found modifiers
-        for (let i = 0, len = foundModifiers.length; i < len; i++) {
-            const found = foundModifiers[i]
-            const searchKey = found.key.toLowerCase()
+            /**
+             * Handle the evaluation of the macro-value and the handling of the modifiers
+             */
+            function __handleMacro() {
+                $this._isOneMacro =
+                    macroStartIndex === 0 &&
+                    lastExpressionIndex === expression.length
+                // Only for Error-reports
+                $this._currentExpression = $this._isOneMacro
+                    ? expression
+                    : expression.substring(macroStartIndex, lastExpressionIndex)
+                $this._hasConstant = false
 
-            // Is the modifier registered?
-            if (MacroInt._modifiers.hasOwnProperty(searchKey))
-                // The value that's assigned to the modifier-searchKey is the callback
-                macroValue = MacroInt._modifiers[searchKey](
-                    this,
-                    macroValue,
-                    found.params
+                // Resolve the macro itself
+                macroValue = $this.getValue(macroParts[0].trim(), false)
+                if (
+                    typeof macroValue === "string" &&
+                    macroValue.indexOf(symbols.macroBegin) > -1
                 )
-            // If we get here no modifier could be found.
-            else this.addError(`Unknown modifier "${found.key}"`)
-        }
-        return macroValue
+                    macroValue = __innerInterpolate(macroValue)
+
+                // Apply/Exec all modifiers. Start at the second item because
+                // the first one is the macro itself.
+                if (macroParts.length > 1) {
+                    __handleFoundModifiers()
+                }
+                macroParts.length = 0
+
+                if (macroValue === undefined && !$this._allowUndefined)
+                    // Add the error-message and don't replace the macro
+                    $this.addError("macro-value is undefined.")
+
+                if (macroPartsStack.length) {
+                    const macroStackItem = macroPartsStack.pop()
+                    macroStartIndex = macroStackItem.startIndex
+                    macroParts = macroStackItem.macroParts
+                    expressionResult = macroStackItem.expressionResult
+
+                    if (macroParts[macroParts.length - 1] !== "") {
+                        // force string because undefined+undefined == NaN
+                        macroParts[macroParts.length - 1] += "" + macroValue
+                    } else {
+                        macroParts[macroParts.length - 1] = macroValue
+                    }
+                } else if (expressionResult !== "") {
+                    // force string because undefined+undefined == NaN
+                    expressionResult += "" + macroValue
+                } else {
+                    expressionResult = macroValue
+                }
+            }
+
+            //---------------------------------------------------------------------
+            //---------------------------------------------------------------------
+            //---------------------------------------------------------------------
+
+            // Use a for-loop over every single character(-code) instead of a regex-handler
+            //  because we want to be able to have _nested_ macros, escaped characters,...
+            for (loopIndex = 0; loopIndex < expressionLength; loopIndex++) {
+                charCode = expression.charCodeAt(loopIndex)
+
+                if (charCode === macroBeginCode) {
+                    // After the quick first-character check compare the whole macroBegin-symbol
+                    //  That's slightly faster than an or-statement
+                    if (
+                        expression.substring(
+                            loopIndex,
+                            loopIndex + symbols.macroBegin.length
+                        ) === symbols.macroBegin
+                    ) {
+                        // Start a new macro expression
+                        let saveStartIndex = loopIndex
+
+                        // Handle everything before the <lastExpressionIndex>
+                        __appendTillLastExpressionIndex(
+                            symbols.macroBegin.length
+                        )
+
+                        // If we are already in a macro push that macro-information to the stack
+                        if (macroParts.length) {
+                            macroPartsStack.push({
+                                startIndex: macroStartIndex,
+                                macroParts: macroParts,
+                                expressionResult: expressionResult,
+                            })
+                            expressionResult = ""
+                        }
+
+                        macroParts = [""] // Create a new array!
+                        macroStartIndex = saveStartIndex // start of the macro-expression = start of ${
+                    }
+                } else if (charCode === macroEndCode) {
+                    if (
+                        macroParts.length &&
+                        (symbols.macroEnd.length === 1 ||
+                            expression.substring(
+                                // finally test the complete indicator
+                                loopIndex,
+                                loopIndex + symbols.macroEnd.length
+                            ) === symbols.macroEnd)
+                    ) {
+                        // Handle everything before the <lastExpressionIndex>
+                        __appendTillLastExpressionIndex(symbols.macroEnd.length)
+
+                        __handleMacro()
+                    }
+                } else if (charCode === modifierSeparatorCode) {
+                    if (
+                        macroParts.length &&
+                        (symbols.modifierSeparator.length === 1 ||
+                            expression.substring(
+                                loopIndex,
+                                loopIndex + symbols.modifierSeparator.length
+                            ) === symbols.modifierSeparator)
+                    ) {
+                        // Handle everything before the <lastExpressionIndex>
+                        __appendTillLastExpressionIndex(
+                            symbols.modifierSeparator.length
+                        )
+                        // We finished the previous value - whatever type it was and start a new one
+                        macroParts.push("")
+                    }
+                } else if (charCode === escapeCharCode) {
+                    // "\" -> Escape the next character
+                    // Handle everything before the <lastExpressionIndex>
+                    __appendTillLastExpressionIndex(1)
+                    loopIndex++ // skip next char - don't interpret it
+                } // macro-end character found
+            } // for expressionIndex...
+
+            // expression ends with an unfinished macro "xxx${yyy"
+            if (macroParts.length)
+                // move back to the beginning of the macro!
+                // Only include if the macro-end is found
+                lastExpressionIndex -= symbols.macroBegin.length
+
+            if (lastExpressionIndex < expressionLength)
+                expressionResult += expression.substring(lastExpressionIndex)
+
+            // Must be reset because of recursive calls
+            $this._isOneMacro = iOM
+            $this._currentExpression = cE
+            $this._hasConstant = hC
+
+            return expressionResult
+        } // __innerInterpolate()
+
+        return __innerInterpolate(expression)
     }
 
     /**
@@ -796,7 +882,7 @@ class MacroInt {
     }
 
     /**
-     * Retrieves the value for the given [macroKey](#macroKey).
+     * Retrieves the value for the given [macroKey](#macrokey).
      *
      * The given `macroKey` can be a delimited string (embedded in one of the
      * std. JS delimiters "'`), reference to the parent path in the object-tree
@@ -806,10 +892,11 @@ class MacroInt {
      * the default-modifier. So it can be used in other modifiers as well.
      *
      * @param {string|undefined} macroKey - A string which's replacement-value is to be retrieved.
+     * @param {boolean} [assumeString=false] - Define whether the macroKey is returned as a it is if the value could not be found in the repositories
      * @return {*} result-value for the given key
      * @see macroKey
      */
-    getValue(macroKey) {
+    getValue(macroKey, assumeString = false) {
         if (typeof macroKey !== "string") return macroKey
 
         if (this._hasConstant)
@@ -883,9 +970,8 @@ class MacroInt {
         } // propertyPath
 
         // Evaluate with the help of the repositories
-        let result
         const splitMacroKey = macroKey.split(".")
-
+        let result = undefined
         let repository
         for (let i = 0, len = this._repositories.length; i < len; i++) {
             repository = this._repositories[i]
@@ -904,28 +990,10 @@ class MacroInt {
                     if (result == undefined) break
                 }
             }
-            if (result !== undefined) break
-        } // repos.find()
+            if (result !== undefined) return result
+        } // for repos
+        if (assumeString && result === undefined) return macroKey
         return result
-    }
-
-    /**
-     * Checks wether a value is undefined or if value is a string if it contains
-     * the value of symbols.resultForUndefinedValues.
-     *
-     * Notice: Works for strings only if the `.resultForUndefinedValue` property is not
-     * set to an empty string ("")
-     *
-     * @param {*} value - The value to be tested
-     * @return {Boolean} `true` if the `value` is undefined ot contains the undefined-string
-     * @private
-     */
-    isUndefined(value) {
-        return (
-            value === undefined ||
-            (typeof value === "string" &&
-                value.includes(this._usedSymbols.resultForUndefinedValues))
-        )
     }
 
     /**
@@ -956,17 +1024,15 @@ class MacroInt {
      * @throws {Error} if another modifier has already one of the new keywords registered.
      * @example
      * ```js
-     * // Reverse the result-string
-     * const modifierCallback = function (macroInt, macroValue) {
-     *     if (typeof macroValue == "string") {
-     *         macroValue = macroValue.split("").reverse().join("")
+     * MacroInt.registerModifier(
+     *     ["reverse", "-r"],
+     *     (macroInt, macroValue, params) => {
+     *         return ("" + macroValue).split("").reverse().join("")
      *     }
-     *     return macroValue
-     * }
-     * MacroInt.registerModifier(["reverse", "-r"], modifierCallback)
-     * console.log(new MacroInt({ macro: "Hello" }).resolve("${macro | -r}"))  // ==> olleH
+     * )
+     * const macroInt = new MacroInt({ macro: "Hello" })
+     * console.log(macroInt.resolve("${macro | -r}")) // expected: olleH
      * ```
-
      */
     static registerModifier(keyWords, callback) {
         // Force array (use a new variable because parameter-type-definition doesn't fit to the actual usage as a array)
@@ -1053,8 +1119,8 @@ class MacroInt {
         })
         let result = filtered.join(" <== ")
         // Add the property-path if it's not empty
-        if (this._propertyPath.length > 0)
-            result += `  (@Property: ${this._propertyPath.join(".")})`
+        if (this._propertyPath.length)
+            result += `  (@property: ${this._propertyPath.join(".")})`
         this.errors.push(result)
     }
 
@@ -1104,7 +1170,9 @@ MacroInt.registerModifier(["mandatory", "-m"], (macroInt, macroValue) => {
     // The `mandatory-modifier` checks wether the macro-result is `undefined`.
     //  If it is `undefined` an error is added to the `macroInt.errors`.
     if (macroValue === undefined)
-        macroInt.addError("Undefined result for mandatory expression.")
+        macroInt.addError(
+            "The result of the mandatory expression is undefined."
+        )
     return macroValue
 })
 
@@ -1112,7 +1180,9 @@ MacroInt.registerModifier(["default", "-d"], (macroInt, macroValue, params) => {
     // Allows to define a default-value if the macro-result is undefined.
 
     // Call "getValue" in any case to recognize multiple constant values/defaults
-    const defValue = macroInt.getValue(params)
+    const defValue = macroInt.getValue(params, false)
+    if (defValue === undefined)
+        macroInt.addError(`The default-value "${params}" is undefined.`)
     if (macroValue === undefined) macroValue = defValue
     return macroValue
 })
@@ -1146,14 +1216,18 @@ MacroInt.registerModifier(
         // Converts the macro-result to a number. Params can contain a default-value
         if (typeof macroValue !== "number") {
             let num = Number(macroValue)
-            if (isNaN(num))
-                if (params) return Number(params)
-                else {
-                    macroInt.addError(
-                        `modifier toNumber: Unable to convert the macro-value "${macroValue}" to a number.`
-                    )
+            if (isNaN(num)) {
+                let errText = `modifier toNumber: Unable to convert the macro-value "${macroValue}"`
+                if (params) {
+                    num = Number(params)
+                    errText += `or the default-value "${params}"`
+                }
+
+                if (isNaN(num)) {
+                    macroInt.addError(errText + " to a number.")
                     return 0
                 }
+            }
             return num
         }
         return macroValue

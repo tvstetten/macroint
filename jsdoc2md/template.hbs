@@ -1,11 +1,12 @@
 {{optionSet "global-index-format" "dl"~}}
-# {{changeCase "title" (package "name")}} {{#each (package "badges")}}[![{{@key}}][{{@key}}]][{{@key}}-url] {{/each}}
-> {{package "description"}}
+
+# {{changeCase "title" (package "name")}} ![Node,js CI](https://github.com/tvstetten/macroint/actions/workflows/Node%20js%20CI.yml/badge.svg)
+> {{package "description"}}\
+> Version {{package "version"}}
 
 ## TOC
 * [Overview](#overview)
-* [Introduction](#Introduction)
-* [API Documentation][#api-documentation]
+* [Introduction](#introduction)
 * [Details and Concepts](#details-and-concepts)
   *  [macroKey](#macrokey)
   *  [Modifier](#modifier)
@@ -14,7 +15,7 @@
   *  [Repository](#repository)
   *  [MacroSymbols](#macrosymbols)
   *  [Siblings-Templates](#siblings-templates)
-* [API Documentation][#api-documentation]
+* [API Documentation](#api-documentation)
 
 ## Overview
 
@@ -77,7 +78,7 @@ console.log(mi.resolve("xxx is ${xxx | default: 'unknown'}")) // => xxx is unkno
 try {
     console.log(mi.resolve("${xxx | mandatory}"))
 } catch (e) {
-    console.log(e) // => Error: Undefined result for mandatory expression. <== ${xxx | mandatory}
+    console.log(e) // => Error: The result of the mandatory expression is undefined. <== ${xxx | mandatory}
 }
 ```
 

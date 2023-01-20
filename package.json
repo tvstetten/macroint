@@ -25,35 +25,7 @@
         "coverage": "c8 --reporter=text mocha",
         "ts-types": "npx -p typescript tsc *.js --declaration --allowJs --emitDeclarationOnly --outDir .",
         "doc": "yarn jsdoc index.js -d ./jsdoc/ --readme ./README.md",
-        "md_": "yarn jsdoc2md index.js --example-lang js --param-list-format list --separators >readme_.md",
-        "md__": "yarn jsdoc2md index.js --helper ./jsdoc2md/rawinclude.js -t ./jsdoc2md/readme.hbs --example-lang js --partial ./jsdoc2md/*.hbs --param-list-format table --separators >readme.md",
-        "md___": "yarn jsdoc2md index.js --plugin dmd-readable -t ./jsdoc2md/overview.hbs --partial ./jsdoc2md/**/*.hbs --example-lang js --helper ./jsdoc2md/jsdoc2md-helper.js >readme.md",
-        "md____": "yarn jsdoc2md index.js -t ./jsdoc2md/overview.hbs --partial ./jsdoc2md/**/*.hbs --example-lang js --helper ./jsdoc2md/jsdoc2md-helper.js >readme.md",
         "md": "node ./jsdoc2md/build_readme.js"
-    },
-    "badges": {
-        "npm": {
-            "image": "https://img.shields.io/npm/v/{{name}}.svg",
-            "url": "https://npmjs.com/package/{{name}}"
-        },
-        "deps": {
-            "image": "https://david-dm.org/darrenpaulwright/{{name}}.svg",
-            "url": "https://david-dm.org/darrenpaulwright/{{name}}"
-        },
-        "size": {
-            "base": "https://packagephobia.now.sh/",
-            "image": "badge?p={{name}}",
-            "url": "result?p={{name}}"
-        },
-        "vulnerabilities": {
-            "base": "https://snyk.io/test/github/DarrenPaulWright/{{name}}",
-            "image": "/badge.svg?targetFile=package.json",
-            "url": "?targetFile=package.json"
-        },
-        "license": {
-            "image": "https://img.shields.io/github/license/DarrenPaulWright/{{name}}.svg",
-            "url": "https://npmjs.com/package/{{name}}/LICENSE.md"
-        }
     },
     "repository": {
         "type": "git",

@@ -1,10 +1,10 @@
-# Macroint [![npm][npm]][npm-url] [![deps][deps]][deps-url] [![size][size]][size-url] [![vulnerabilities][vulnerabilities]][vulnerabilities-url] [![license][license]][license-url] 
-> Interpolate Macros in Strings, Object-Properties and Array-Elements.
+# Macroint ![Node,js CI](https://github.com/tvstetten/macroint/actions/workflows/Node%20js%20CI.yml/badge.svg)
+> Interpolate Macros in Strings, Object-Properties and Array-Elements.\
+> Version 0.3.0
 
 ## TOC
 * [Overview](#overview)
-* [Introduction](#Introduction)
-* [API Documentation][#api-documentation]
+* [Introduction](#introduction)
 * [Details and Concepts](#details-and-concepts)
   *  [macroKey](#macrokey)
   *  [Modifier](#modifier)
@@ -13,7 +13,7 @@
   *  [Repository](#repository)
   *  [MacroSymbols](#macrosymbols)
   *  [Siblings-Templates](#siblings-templates)
-* [API Documentation][#api-documentation]
+* [API Documentation](#api-documentation)
 
 ## Overview
 
@@ -76,7 +76,7 @@ console.log(mi.resolve("xxx is ${xxx | default: 'unknown'}")) // => xxx is unkno
 try {
     console.log(mi.resolve("${xxx | mandatory}"))
 } catch (e) {
-    console.log(e) // => Error: Undefined result for mandatory expression. <== ${xxx | mandatory}
+    console.log(e) // => Error: The result of the mandatory expression is undefined. <== ${xxx | mandatory}
 }
 ```
 
@@ -250,16 +250,14 @@ of the default-modifiers.
 
 **Example**  
 ```js
-const callback = (macroInt, macroValue, params) => {
-    if (typeof macroValue === "string" && macroValue) {
-       macroValue = macroValue.split("").reverse().join("")
+MacroInt.registerModifier(
+    ["reverse", "-r"],
+    (macroInt, macroValue, params) => {
+        return ("" + macroValue).split("").reverse().join("")
     }
-    return macroValue
-}
-MacroInt.registerModifier(["reverse", "-r"], callback)
-
+)
 const macroInt = new MacroInt({ macro: "Hello" })
-console.log(macroInt.resolve("${macro | -r}"))   // expected: olleH
+console.log(macroInt.resolve("${macro | -r}")) // expected: olleH
 ```
 
 
@@ -318,7 +316,7 @@ could not be resolved.
 The `MacroSymbols` is an object that has a couple of properties that define
 the string-indicators used to identify the different parts of a macro.\
 \
-The `MacroSymbols` used by the `MacroInt` can be modified by either change
+The `MacroSymbols` used by `MacroInt` can be modified by either change
 the static MacroInt.defaultSymbols (which is **dangerous** because all other
 modules using `MacroInt` are affected). The other way is to provide an object
 with some or all of the defined symbols to the options.symbols parameter of
@@ -326,15 +324,14 @@ the MacroInt-constructor.
 
 **Properties**
 
-| Name | Type | Description |
-| --- | --- | --- |
-| macroBegin | <code>String</code> | Indicates the begin of a macro inside of an expression. Must be a non-empty string. Default: "${" |
-| macroEnd | <code>String</code> | String that indicates the end of a macro inside an expression. Must be a non-empty string. Default: "}" |
-| modifierSeparator | <code>String</code> | String that separates the regular macroKey and modifier(s). Must be a non-empty string. Default: "\|" |
-| modifierParamSeparator | <code>String</code> | String that's used as a separator between one modifier and it's optional parameters. Must be a non-empty string. Default: ":" |
-| propertyPathIndicator | <code>String</code> | String to identify expressions that will be interpolated with the name of one of the parent-nodes of the current entry. (By default only used if `.resolve` is called with an object-parameter.) "^" |
-| siblingsTemplateKey | <code>String</code> | String that identifies a property in an object that is used as an template for all siblings [siblings-templates](#siblings-templates) of that entry. "$template" |
-| resultForUndefinedValues | <code>String</code> | String that's used as a macro-result if the value of a macro is `undefined`. "$$-undefined-$$" |
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| [macroBegin] | <code>String</code> | <code>${</code> | Indicates the begin of a macro inside of an expression. Must be a non-empty string. |
+| [macroEnd] | <code>String</code> | <code>}</code> | String that indicates the end of a macro inside an expression. Must be a non-empty string. |
+| [modifierSeparator] | <code>String</code> | <code>\|</code> | String that separates the regular macroKey and modifier(s). Must be a non-empty string. |
+| [modifierParamSeparator] | <code>String</code> | <code>:</code> | String that's used as a separator between one modifier and it's optional parameters. Must be a non-empty string. |
+| [propertyPathIndicator] | <code>String</code> | <code>^</code> | String to identify expressions that will be interpolated with the name of one of the parent-nodes of the current entry. (By default only used if `.resolve` is called with an object-parameter.) |
+| [siblingsTemplateKey] | <code>String</code> | <code>$template</code> | String that identifies a property in an object that is used as an template for all siblings [siblings-templates](#siblings-templates) of that entry. |
 
 
 
@@ -342,6 +339,8 @@ the MacroInt-constructor.
 
 ## Siblings-Templates
 The sibling templates allow the definition of all necessary entries for all sibling-objects.
+
+TODO: Build documentation
 
 
 
@@ -363,7 +362,7 @@ and array-elements.
         * [.defaultSymbols](#macroint-defaultsymbols) : <code>MacroSymbols</code>
         * [.errors](#macroint-errors) : <code>Array.&lt;String&gt;</code>
         * [.resolve(expression, [options])](#macroint-resolve) ⇒ <code>String</code> \| <code>Object</code> \| <code>Array</code>
-        * [.getValue(macroKey)](#macroint-getvalue) ⇒ <code>\*</code>
+        * [.getValue(macroKey, [assumeString])](#macroint-getvalue) ⇒ <code>\*</code>
         * [.registerRepository(repositories)](#macroint-registerrepository) ⇒ <code>this</code>
         * [.isOneMacro()](#macroint-isonemacro) ⇒ <code>Boolean</code>
         * [.addError(...msgs)](#macroint-adderror) ⇒ <code>void</code>
@@ -451,8 +450,8 @@ console.dir(config) // => {foo: 'FOO', child: {baz: 12345, num: 42, what: "Unive
 ```
 <br><a name="MacroInt+getValue"></a><a name="getvalue"></a>
 
-### .getValue(macroKey) ⇒ <code>\*</code>
-Retrieves the value for the given [macroKey](#macroKey).
+### .getValue(macroKey, [assumeString]) ⇒ <code>\*</code>
+Retrieves the value for the given [macroKey](#macrokey).
 
 The given `macroKey` can be a delimited string (embedded in one of the
 std. JS delimiters "'`), reference to the parent path in the object-tree
@@ -465,9 +464,10 @@ the default-modifier. So it can be used in other modifiers as well.
 **Returns**: <code>\*</code> - result-value for the given key  
 **See**: [macroKey](#macrokey)
 
-| Param | Type | Description |
-| --- | --- | --- |
-| macroKey | <code>string</code> \| <code>undefined</code> | A string which's replacement-value is to be retrieved. |
+| Param | Type | Default | Description |
+| --- | --- | --- | --- |
+| macroKey | <code>string</code> \| <code>undefined</code> |  | A string which's replacement-value is to be retrieved. |
+| [assumeString] | <code>boolean</code> | <code>false</code> | Define whether the macroKey is returned as a it is if the value could not be found in the repositories |
 
 <br><a name="MacroInt+registerRepository"></a><a name="registerrepository"></a>
 
@@ -538,15 +538,14 @@ Register a modifier.
 
 **Example**  
 ```js
-// Reverse the result-string
-const modifierCallback = function (macroInt, macroValue) {
-    if (typeof macroValue == "string") {
-        macroValue = macroValue.split("").reverse().join("")
+MacroInt.registerModifier(
+    ["reverse", "-r"],
+    (macroInt, macroValue, params) => {
+        return ("" + macroValue).split("").reverse().join("")
     }
-    return macroValue
-}
-MacroInt.registerModifier(["reverse", "-r"], modifierCallback)
-console.log(new MacroInt({ macro: "Hello" }).resolve("${macro | -r}"))  // ==> olleH
+)
+const macroInt = new MacroInt({ macro: "Hello" })
+console.log(macroInt.resolve("${macro | -r}")) // expected: olleH
 ```
 <br><a name="MacroInt.unregisterModifier"></a><a name="unregistermodifier"></a>
 
@@ -587,18 +586,3 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
-
-[npm]: https://img.shields.io/npm/v/macroint.svg
-[npm-url]: https://npmjs.com/package/macroint
-
-[deps]: https://david-dm.org/darrenpaulwright/macroint.svg
-[deps-url]: https://david-dm.org/darrenpaulwright/macroint
-
-[size]: https://packagephobia.now.sh/badge?p&#x3D;macroint
-[size-url]: https://packagephobia.now.sh/result?p&#x3D;macroint
-
-[vulnerabilities]: https://snyk.io/test/github/DarrenPaulWright/macroint/badge.svg?targetFile&#x3D;package.json
-[vulnerabilities-url]: https://snyk.io/test/github/DarrenPaulWright/macroint?targetFile&#x3D;package.json
-
-[license]: https://img.shields.io/github/license/DarrenPaulWright/macroint.svg
-[license-url]: https://npmjs.com/package/macroint/LICENSE.md
